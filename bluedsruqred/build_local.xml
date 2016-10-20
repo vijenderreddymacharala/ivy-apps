@@ -1,0 +1,403 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	This build script can be run from outside RAD. It can be used for continuous integration.
+
+	Example:
+	ant -Dwebsphere.serverhome="C:/Program Files/IBM/WebSphere/AppServer/runtimes/base_v61"
+		-buildfile C:/projects/bluezone/BluezoneUI_tools/scripts/test/build.xml 
+		build-test-deploy
+	
+	This example command line should work for:
+	1. Building the EAR (target=ear)
+	2. Running service and integration layer JUnit tests (target = test-service, test-integration)
+
+	For these scenarios, the "websphere.serverhome" just needs to contain the JRE libraries.
+	
+	For running functional tests (i.e., the "test-application" target), the application  has to be deployed on a WAS server.
+	In that case, ensure that "websphere.serverhome" points to the websphere server installation directory.
+	
+	Note that 'ANT_HOME' should be defined as an environment variable and $ANT_HOME/bin should be in $PATH.
+	Ant version should be 1.7.0 or higher and requires a JDK installed on the workstation.
+	Selenium (for functional testing) requires Java v1.5 or higher.
+	
+ -->
+<project name="Blue2Int" basedir=".." default="build" xmlns:ant4eclipse="antlib:org.ant4eclipse">
+
+	<!-- import properties (app settings, classpath, jar file locations) -->
+	<import file="test-properties_local.xml" /> 
+	<taskdef resource="net/sf/antcontrib/antlib.xml" classpath="${antcontrib.jar}" />
+	<taskdef resource="org/aspectj/tools/ant/taskdefs/aspectjTaskdefs.properties" classpath="${aspectjtools.jar}" />
+	<taskdef name="xmltask" classname="com.oopsconsultancy.xmltask.ant.XmlTask" classpath="${common.lib.home}/xmlpath-1.15.1/xmltask-v1.15.1.jar" />
+
+	<propertyregex property="pkg.base.slashes" input="${project.package.base}" regexp="\." replace="/" global="true" />
+	<property name="build.compiler" value="org.eclipse.jdt.core.JDTCompilerAdapter"/>
+
+	<target name="init">
+
+		<!-- Initialize the time -->
+		<tstamp>
+			<format property="copyright.year" pattern="yyyy" />
+			<format property="build.time" pattern="yyyy-MM-dd hh:mm:ss" />
+		</tstamp>
+
+		<!-- List of variables in .properties files that will be replaced at build time -->
+		<filterset id="variables.to.replace">
+			<filter token="APPNAME" value="${project.name}" />
+			<filter token="APPVERSION" value="${project.version}" />
+			<filter token="COPYRIGHT-YEAR" value="${copyright.year}" />
+			<filter token="BUILD-TIME" value="${build.time}" />
+		</filterset>
+
+		<!-- Taskdefs -->
+		<!-- <taskdef resource="net/sf/antcontrib/antlib.xml" classpath="${antcontrib.jar}" />
+		
+		<taskdef name="xmltask" classname="com.oopsconsultancy.xmltask.ant.XmlTask" classpath="${common.lib.home}/xmlpath-1.15.1/xmltask-v1.15.1.jar" />  -->
+
+		<!-- Test for Websphere Server -->
+		<fail message="Websphere was not found in: ${websphere.serverhome}. Please set websphere.serverhome={path-to-Websphere} in ${basedir}\build_local.properties">
+			<condition>
+				<not>
+					<available file="${websphere.serverhome}" type="dir" />
+				</not>
+			</condition>
+		</fail>
+
+		<!-- Ensure that Ant 1.6.2+ is being used -->
+		<available classname="org.apache.tools.ant.DynamicAttribute" property="ant-1.6.2" />
+		<fail unless="ant-1.6.2" message="This build file requires Ant 1.6.2 for faster unit testing" />
+
+		<!-- Get classpaths and source paths from Eclipse -->
+		<!-- using ant4eclipse from sourceforge -->
+		<taskdef uri="antlib:org.ant4eclipse" resource="org/ant4eclipse/antlib.xml" classpath="${ant4eclipse.jar}" />
+
+		<!-- Define the Websphere JRE and runtime libraries since ant4eclipse cannot find them otherwise -->
+
+		<ant4eclipse:installedJREs>
+			<jre id="WebSphere v7.0 JRE" location="${websphere.jre}" />
+		</ant4eclipse:installedJREs>
+
+		<ant4eclipse:jdtClassPathLibrary name="org.eclipse.jst.j2ee.internal.web.container">
+			<fileset dir="${web.lib.dir}" includes="*.jar" />
+		</ant4eclipse:jdtClassPathLibrary>
+
+		<ant4eclipse:jdtClassPathLibrary name="org.eclipse.jdt.USER_LIBRARY/WebSphere Application Server v8.5">
+			<fileset dir="${websphere.lib}">
+				<include name="**/*.jar" />
+				<exclude name="**/aspectj*.jar" />
+			</fileset>
+			<fileset dir="${websphere.serverhome}/plugins">
+				<include name="com.ibm.ws.webcontainer*.jar" />
+				<include name="com.ibm.ws.portletcontainer*.jar" />
+			</fileset>
+		</ant4eclipse:jdtClassPathLibrary>
+		
+		<ant4eclipse:jdtClassPathLibrary name="org.eclipse.jst.server.core.container/com.ibm.ws.ast.st.runtime.runtimeTarget.v85/was.base.v85">
+					<fileset dir="${websphere.lib}">
+						<include name="**/*.jar" />
+						<exclude name="**/aspectj*.jar" />
+					</fileset>
+					<fileset dir="${websphere.serverhome}/plugins">
+						<include name="**/com.ibm.ws.webcontainer*.jar" />
+					</fileset>
+		</ant4eclipse:jdtClassPathLibrary>
+		
+		<ant4eclipse:jdtClassPathLibrary name="org.eclipse.jst.server.core.container/com.ibm.ws.ast.st.runtime.runtimeTarget.v85/WebSphere Application Server v8.5">
+							<fileset dir="${websphere.lib}">
+								<include name="**/*.jar" />
+								<exclude name="**/aspectj*.jar" />
+							</fileset>
+							<fileset dir="${websphere.serverhome}/plugins">
+								<include name="**/com.ibm.ws.webcontainer*.jar" />
+							</fileset>
+				</ant4eclipse:jdtClassPathLibrary>
+
+		<ant4eclipse:jdtClassPathLibrary name="org.eclipse.jst.j2ee.internal.module.container">
+			<fileset dir="${web.lib.dir}" includes="*.jar" />
+		</ant4eclipse:jdtClassPathLibrary >
+				
+		<ant4eclipse:jdtClassPathLibrary name="org.eclipse.ajdt.core.ASPECTJRT_CONTAINER">
+			<fileset dir="${tools.project.basedir}/third_party/aspectj-1.6.9">
+				<include name="**/*.jar" />
+			</fileset>
+		</ant4eclipse:jdtClassPathLibrary>
+
+		<ant4eclipse:jdtClassPathLibrary name="org.eclipse.jdt.junit.JUNIT_CONTAINER/4">
+			<fileset dir="${dependencies}/test" includes="${junit.jar.filename}" />
+		</ant4eclipse:jdtClassPathLibrary>
+
+		<!-- read the eclipse classpath -->
+		<echo>Resolving classpath for: ${web.project}</echo>
+		<ant4eclipse:getJdtClassPath pathId="web.classpath.ant4eclipse" workspaceDirectory="${projects.basedir}" projectName="${web.project}" runtime="true" />
+		<ant4eclipse:getJdtSourcePath pathId="web.src.path" workspaceDirectory="${projects.basedir}" projectName="${web.project}" allowMultipleFolders="true" />
+
+		<path id="web.classpath">
+			<fileset dir="${runtime.dependencies.dir}" includes="**/*.jar" />
+			<fileset dir="${provided.dependencies.dir}" includes="*.jar" />
+			<path refid="web.classpath.ant4eclipse" />
+		</path>
+
+
+		<property name="prop.web.classpath" refid="web.classpath" />
+		
+		<echo>Resolving classpath for: ${common.project}</echo>
+		<ant4eclipse:getJdtClassPath pathId="common.classpath" workspaceDirectory="${projects.basedir}" projectName="${common.project}" />
+		<ant4eclipse:getJdtSourcePath pathId="common.src.path" workspaceDirectory="${projects.basedir}" projectName="${common.project}" allowmultiplefolders="true" />
+		<property name="prop.common.classpath" refid="common.classpath" />
+
+		<echo>Resolving classpath for: ${integration.project}</echo>
+		<ant4eclipse:getJdtClassPath pathId="integration.classpath" workspaceDirectory="${projects.basedir}" projectName="${integration.project}" />
+		<ant4eclipse:getJdtSourcePath pathId="integration.src.path" workspaceDirectory="${projects.basedir}" projectName="${integration.project}" allowmultiplefolders="true" />
+		<property name="prop.integration.classpath" refid="integration.classpath" />
+		
+		<echo>Resolving classpath for: ${service.project}</echo>
+		<ant4eclipse:getJdtClassPath pathId="service.classpath" workspaceDirectory="${projects.basedir}" projectName="${service.project}" />
+		<ant4eclipse:getJdtSourcePath pathId="service.src.path" workspaceDirectory="${projects.basedir}" projectName="${service.project}" allowmultiplefolders="true" />
+		<property name="prop.service.classpath" refid="service.classpath" />
+		
+		<echo>Resolving classpath for: ${remote.project}</echo>
+		<ant4eclipse:getJdtClassPath pathId="remote.classpath" workspaceDirectory="${projects.basedir}" projectName="${remote.project}" />
+		<ant4eclipse:getJdtSourcePath pathId="remote.src.path" workspaceDirectory="${projects.basedir}" projectName="${remote.project}" allowmultiplefolders="true" />
+		<property name="prop.remote.classpath" refid="remote.classpath" />
+
+		<echo>Resolving classpath for: ${tools.project}</echo>
+		<ant4eclipse:getJdtClassPath pathId="tools.classpath" workspaceDirectory="${projects.basedir}" projectName="${tools.project}" runtime="true" />
+		<ant4eclipse:getJdtSourcePath pathId="tools.src.path" workspaceDirectory="${projects.basedir}" projectName="${tools.project}" allowMultipleFolders="true" />
+		
+		<!-- <echo>Resolving classpath for: ${multi.project}</echo>
+		<ant4eclipse:getJdtClassPath pathId="multiweb.classpath" workspaceDirectory="${projects.basedir}" projectName="${multi.project}" runtime="true" />
+		<ant4eclipse:getJdtSourcePath pathId="multi.src.path" workspaceDirectory="${projects.basedir}" projectName="${multi.project}" allowMultipleFolders="true" />
+		<property name="prop.multiweb.classpath" refid="multiweb.classpath" /> -->
+				
+		
+	</target>
+	
+
+	<!-- Check timestamp on files -->
+	<target name="prepare" depends="init">
+		
+		<delete dir="${dist.dir}" />
+		<delete dir="${integration.project.basedir}/bin" />
+		<delete dir="${common.project.basedir}/bin" />
+		<delete dir="${remotecontract.project.basedir}/bin" />
+		<delete dir="${service.project.basedir}/bin" />
+		<delete dir="${web.java.classes.dir}" />
+		<!-- <delete dir="${multi.java.classes.dir}" /> -->
+		
+		<echo message="Preparing target directory '${webapp.target}'" />
+		<mkdir dir="${webapp.target}" />
+		<mkdir dir="${webapp.target}/WEB-INF/lib" />
+		<mkdir dir="${webapp.dist}" />
+		<mkdir dir="${dist.dir}" />
+		
+	</target>
+
+
+	<!-- Common -->
+	<target name="compile-common" depends="prepare" >
+			<compile module="common" src.dir="${common.src.dir}" dest.dir="${common.project.basedir}/bin" />
+	</target>
+
+
+	<target name="package-common" depends="compile-common">
+		<!-- Copy XML files from source -->
+		<copy todir="${common.project.basedir}/bin">
+			<fileset dir="${common.src.dir}" includes="**/*.xml" />
+			<filterset refid="variables.to.replace" />
+		</copy>
+		<!-- Copy manifest -->
+		<mkdir dir="${common.project.basedir}/bin/META-INF" />
+		<copy overwrite="true" file="${common.src.dir}/META-INF/MANIFEST.MF" todir="${common.project.basedir}/bin/META-INF" />
+		<jar destfile="${dist.dir}/${common.project}.jar" manifest="${common.project.basedir}/bin/META-INF/MANIFEST.MF">
+			<fileset dir="${common.project.basedir}/bin" includes="**" />
+		</jar>
+	</target>
+
+	<!-- Integration -->
+	<target name="compile-integration" depends="package-common" >
+		<compile module="integration" src.dir="${integration.src.dir}" dest.dir="${integration.project.basedir}/bin" />
+	</target>
+
+
+	<target name="package-integration" depends="compile-integration">
+		<!-- Copy XML files from source -->
+		<copy todir="${integration.project.basedir}/bin">
+			<fileset dir="${integration.src.dir}" includes="**/*.xml" />
+			<filterset refid="variables.to.replace" />
+		</copy>
+		<!-- Copy manifest -->
+		<mkdir dir="${integration.project.basedir}/bin/META-INF" />
+		<copy overwrite="true" file="${integration.src.dir}/META-INF/MANIFEST.MF" todir="${integration.project.basedir}/bin/META-INF" />
+		<jar destfile="${dist.dir}/${integration.project}.jar" manifest="${integration.project.basedir}/bin/META-INF/MANIFEST.MF">
+			<fileset dir="${integration.project.basedir}/bin" includes="**" />
+		</jar>
+	</target>
+	
+	<!-- Remote Contract -->
+		<target name="compile-remote" depends="package-integration" >
+				<compile module="remote" src.dir="${remote.src.dir}" dest.dir="${remotecontract.project.basedir}/bin" />
+		</target>
+
+		<target name="package-remote" depends="compile-remote">
+			<!-- Copy manifest -->
+			<mkdir dir="${remotecontract.project.basedir}/bin/META-INF" />
+			<copy overwrite="true" file="${remote.src.dir}/META-INF/MANIFEST.MF" todir="${remotecontract.project.basedir}/bin/META-INF" />
+			<jar destfile="${dist.dir}/${remote.project}.jar" manifest="${remotecontract.project.basedir}/bin/META-INF/MANIFEST.MF">
+				<fileset dir="${remotecontract.project.basedir}/bin" includes="**" />
+			</jar>
+		</target>
+	
+	<!-- Service -->
+		<target name="compile-service" depends="package-remote" >
+			<compile module="service" src.dir="${service.src.dir}" dest.dir="${service.project.basedir}/bin" />
+		</target>
+
+		<target name="package-service" depends="compile-service">
+			<copy todir="${service.project.basedir}/bin">
+				<fileset dir="${service.project.basedir}/src/config" includes="**/*.*" />
+				<fileset dir="${spring.config.dir}" includes="**/*.*" excludes="**/*.java" />
+				<filterset refid="variables.to.replace" />
+			</copy>
+			<!-- Copy manifest -->
+			<mkdir dir="${service.project.basedir}/bin/META-INF" />
+			<copy overwrite="true" file="${service.src.dir}/META-INF/MANIFEST.MF" todir="${service.project.basedir}/bin/META-INF" />
+			<jar destfile="${dist.dir}/${service.project}.jar" manifest="${service.project.basedir}/bin/META-INF/MANIFEST.MF">
+				<fileset dir="${service.project.basedir}/bin" includes="**" />
+			</jar>
+		</target>
+	
+	<!-- Web -->	
+
+	<!-- =================================================================== -->
+	<!-- The "copy-web-files" target copies the static web resources portion -->
+	<!-- of your web application source into the build target area           -->
+	<!-- =================================================================== -->
+	<target name="copy-web-files" depends="prepare">
+		<echo message="Copying static files" />
+		<!-- Remove the copy block below if you're not displaying version/copyright in the footer -->
+		<copy todir="${webapp.target}">
+			<fileset dir="${web.project.basedir}/WebContent" includes="**/*.*" />
+			<filterset refid="variables.to.replace" />
+		</copy>
+		<copy todir="${webapp.target}/WEB-INF/classes" includeEmptyDirs="no">
+			<fileset dir="${web.src.dir}">
+				<include name="**/*.*" />
+				<exclude name="**/*.java" />
+			</fileset>
+		</copy>
+	</target>
+
+	<target name="compile-web" depends="package-service,copy-web-files">
+		<compile module="web" src.dir="${web.src.dir}" dest.dir="${webapp.target}/WEB-INF/classes"  />
+		 <copy todir="${webapp.target}/WEB-INF/lib">
+			<fileset dir="${runtime.dependencies.dir}" includes="*.jar"/>
+			<!-- <fileset dir="${runtime.dependencies.dir}/bd" includes="*.jar"/> -->
+			<fileset dir="${runtime.dependencies.dir}/cxf" includes="*.jar"/>
+			<fileset dir="${runtime.dependencies.dir}/displaytag" includes="*.jar"/>
+			<fileset dir="${runtime.dependencies.dir}/hcsc" includes="*.jar"/>
+			<fileset dir="${runtime.dependencies.dir}/logging" includes="*.jar"/>
+			<fileset dir="${runtime.dependencies.dir}/spring" includes="*.jar"/>
+			<fileset dir="${runtime.dependencies.dir}/validation" includes="*.jar"/>			
+		</copy>
+	</target>
+
+
+	<target name="package-web" depends="compile-web">
+		<war destfile="${webapp.dist}/${web.packagename}" duplicate="preserve" webxml="${webapp.target}/WEB-INF/web.xml" compress="true" manifest="${webapp.target}/META-INF/MANIFEST.MF">
+			<fileset dir="${webapp.target}" excludes="**/web.xml" />
+		</war>
+	</target>
+
+	
+	<!-- Multi_web -->	
+
+		<!-- =================================================================== -->
+		<!-- The "copy-web-files" target copies the static web resources portion -->
+		<!-- of your web application source into the build target area           -->
+		<!-- =================================================================== -->
+	<!--	<target name="copy-multi-web-files" depends="prepare">
+			<echo message="Copying static files" /> -->
+			<!-- Remove the copy block below if you're not displaying version/copyright in the footer -->
+			<!-- <copy todir="${multiwebapp.target}">
+				<fileset dir="${multi.project.basedir}/WebContent" includes="**/*.*" />
+				<filterset refid="variables.to.replace" />
+			</copy>
+			<copy todir="${multiwebapp.target}/WEB-INF/classes" includeEmptyDirs="no">
+				<fileset dir="${multi.src.dir}">
+					<include name="**/*.*" />
+					<exclude name="**/*.java" />
+				</fileset>
+			</copy>
+		</target>
+
+		<target name="compile-multiweb" depends="package-web,copy-multi-web-files">
+			<compile module="multiweb" src.dir="${multi.src.dir}" dest.dir="${multiwebapp.target}/WEB-INF/classes"  />
+			 <copy todir="${multiwebapp.target}/WEB-INF/lib">
+				<fileset dir="${runtime.dependencies.dir}" includes="*.jar"/>
+				<fileset dir="${runtime.dependencies.dir}/bd" includes="*.jar"/>
+				<fileset dir="${runtime.dependencies.dir}/cxf" includes="*.jar"/>
+				<fileset dir="${runtime.dependencies.dir}/displaytag" includes="*.jar"/>
+				<fileset dir="${runtime.dependencies.dir}/hcsc" includes="*.jar"/>
+				<fileset dir="${runtime.dependencies.dir}/logging" includes="*.jar"/>
+				<fileset dir="${runtime.dependencies.dir}/spring" includes="*.jar"/>
+				<fileset dir="${runtime.dependencies.dir}/validation" includes="*.jar"/>			
+			</copy>
+		</target>
+
+
+		<target name="package-multiweb" depends="compile-multiweb">
+			<war destfile="${dist.dir}/MultiHub_web.war" duplicate="preserve" webxml="${multiwebapp.target}/WEB-INF/web.xml" compress="true" manifest="${multiwebapp.target}/META-INF/MANIFEST.MF">
+				<fileset dir="${multiwebapp.target}" excludes="**/web.xml" />
+			</war>
+		</target> -->
+
+	<macrodef name="compile">
+		<attribute name="module" />
+		<attribute name="src.dir" />
+		<attribute name="additional.src.dirs" default="" />
+		<attribute name="dest.dir"  /> <!-- default="${build.dir}/@{module}/classes" -->
+		<element name="options" optional="yes" />
+		<sequential>
+			<echo>Compiling @{module}...</echo>
+			<mkdir dir="@{dest.dir}" />
+			<!--<mkdir dir="${test.dir}/@{module}/classes"/>-->
+			<javac compiler="org.eclipse.jdt.core.JDTCompilerAdapter" srcdir="@{src.dir}" 
+			destdir="@{dest.dir}" debug="${compile.debug}" deprecation="${compile.deprecation}" optimize="${compile.optimize}" 
+			classpathref="@{module}.classpath" target="${compile.target}" source="${compile.source}">
+				<classpath>
+					<fileset dir="${provided.dependencies.dir}" includes="ecj-3.7.1.jar"/>
+					<fileset dir="${runtime.dependencies.dir}" includes="**/*.jar"/>
+					<!-- <fileset dir="${multi.lib.dir}" includes="**/*.jar"/> -->
+					<fileset dir="${web.lib.dir}" includes="**/*.jar"/>					
+					<fileset dir="${common.lib.home}" includes="**/*.jar"/>
+					<fileset dir="${dist.dir}" includes="*.jar"/>
+				</classpath>
+				<options />
+			</javac>
+		</sequential>
+	</macrodef>
+
+
+	<!-- Remove classes directory for clean build -->
+	<target name="clean" description="Removes build artifacts">
+		<echo level="info">Cleaning build and distribution directories</echo>
+		<delete dir="${build.dir}" />
+	</target>
+
+	<!-- =================================================================== -->
+	<!-- The "ear" target builds the ear file -->
+	<!-- =================================================================== -->
+	<target name="ear" depends="package-web" description="Build the .ear file">
+		<!-- remove embedded EAR configuration and other artifacts -->
+		<copy todir="${dist.dir}/META-INF">
+			<fileset dir="${ear.project.basedir}/META-INF">
+				<include name="**/*" />
+			</fileset>
+		</copy>
+    	<mkdir dir="${build.path}"/>
+		<ear destfile="${ear.path}" appxml="${ear.project.basedir}/META-INF/application.xml" basedir="${dist.dir}" excludes="**/application.xml">
+		</ear>
+	</target>
+
+	<target name="build" depends="ear,clean" />
+	
+</project>

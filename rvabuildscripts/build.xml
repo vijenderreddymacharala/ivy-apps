@@ -1,0 +1,328 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<project name="RVA" basedir="." default="deploy-nexus"  xmlns:ivy="antlib:org.apache.ivy.ant">
+
+    <ivy:configure settingsid="resolve.settings" file="ivysettings.xml" />
+	<ivy:resolve resolveid="ivyresolve" settingsRef="resolve.settings" type="jar,bundle" file="ivy.xml" />
+	
+	<!-- ==================================================================== -->
+	<!-- Properties                                                           -->
+	<!-- ==================================================================== -->
+	<property name="JAVA_SOURCE_VERSION"   value="1.6"/>
+	<property name="JAVA_TARGET_VERSION"   value="1.6"/>
+	<property file="jdk.properties"/>
+    <property file="RVA_build.properties"/>
+	<property name="RVA_Common.location"       value="RVA_Common"/>
+	<property name="RVA_Service.location"      value="RVA_Service"/>
+	<property name="RVA_Domain.location"       value="RVA_Domain"/>
+	<property name="RVA_Web.location"          value="RVA_Web"/>
+	<property name="RVA_persistence.location"  value="RVA_persistence"/>
+	<property name="RVA_Web.location"          value="RVA_Web"/>
+	<property name="RVA_presentation.location" value="RVA_presentation"/>
+	<property name="RVA_Ear.location"          value="RVA_Ear"/>
+	<property name="RVA_ejbs.location"         value="RVA_ejbs"/>
+	<property name="RVA_Ear.lib.location" value="${RVA_Ear.location}/lib"/>
+	
+	<!-- ==================================================================== -->
+	<!-- Library paths                                                        -->
+	<!-- ==================================================================== -->	
+	<ivy:cachepath resolveid="ivyresolve" pathid="compile.classpath" conf="compile,service" />	
+	
+	<!-- ==================================================================== -->
+	<!-- Build and Compilation                                                -->
+	<!-- ==================================================================== -->
+	<target name="check">
+		<condition property="deldir">
+		<available file="${RVA_Common.location}/build" type="dir"/>
+		</condition>
+	</target>
+	<target name="clean" depends="check" if="deldir" description="Cleaning of class files">
+		<echo>Clean_Task</echo>
+		<delete failonerror="false" includeemptydirs="true">
+			<fileset dir="${RVA_Common.location}/build" includes="**/*" />
+		</delete>
+		<delete failonerror="false" includeemptydirs="true">
+			<fileset dir="${RVA_Common.location}/dist" includes="**/*" />
+		</delete>
+		<delete failonerror="false" includeemptydirs="true">
+			<fileset dir="${RVA_Domain.location}/build" includes="**/*" />
+		</delete>
+		<delete failonerror="false" includeemptydirs="true">
+			<fileset dir="${RVA_Domain.location}/dist" includes="**/*" />
+		</delete>
+		<delete failonerror="false" includeemptydirs="true">
+			<fileset dir="${RVA_persistence.location}/build" includes="**/*" />
+		</delete>
+		<delete failonerror="false" includeemptydirs="true">
+			<fileset dir="${RVA_persistence.location}/dist" includes="**/*" />
+		</delete>
+		<delete failonerror="false" includeemptydirs="true">
+			<fileset dir="${RVA_Service.location}/build" includes="**/*" />
+		</delete>
+		<delete failonerror="false" includeemptydirs="true">
+			<fileset dir="${RVA_Service.location}/dist" includes="**/*" />
+		</delete>
+		<delete failonerror="false" includeemptydirs="true">
+			<fileset dir="${RVA_ejbs.location}/build" includes="**/*" />
+		</delete>
+		<delete failonerror="false" includeemptydirs="true">
+			<fileset dir="${RVA_ejbs.location}/dist" includes="**/*" />
+		</delete>
+		<delete failonerror="false" includeemptydirs="true">
+			<fileset dir="${RVA_presentation.location}/build" includes="**/*" />
+		</delete>
+		<delete failonerror="false" includeemptydirs="true">
+			<fileset dir="${RVA_presentation.location}/dist" includes="**/*" />
+		</delete>
+		<delete failonerror="false" includeemptydirs="true">
+			<fileset dir="${RVA_Web.location}/build" includes="**/*" />
+		</delete>
+		<delete failonerror="false" includeemptydirs="true">
+			<fileset dir="${RVA_Web.location}/dist" includes="**/*" />
+		</delete>
+		<delete failonerror="false" includeemptydirs="true">
+			<fileset dir="${RVA_Ear.location}/dist" includes="**/*" />
+		</delete>
+	</target>
+	<target name="RVA_Common_Task" depends="clean" description="RVA Common Jar Creation">
+		<echo>RVA_Common_Task</echo>
+		<mkdir dir="${RVA_Common.location}/build" />
+		<mkdir dir="${RVA_Common.location}/dist" />
+		<javac srcdir="${RVA_Common.location}/src" 
+		destdir="${RVA_Common.location}/build" 
+		debug="on" 
+		fork="true" 
+		source="${JAVA_SOURCE_VERSION}"
+		target="${JAVA_TARGET_VERSION}"
+		includes="**/*.java" 
+		includeantruntime="false">
+			<classpath>
+			<path refid="compile.classpath"/>
+			</classpath>
+		</javac>
+		<jar destfile="${RVA_Common.location}/dist/RVA_Common.jar" basedir="${RVA_Common.location}/build" includes="com/**/*.class" excludes="**/*.xml,**/.dm/*,**/.dm" />
+	</target>
+	<target name="RVA_Domain_Task" depends="RVA_Common_Task" description="RVA Domain Jar Creation">
+		<echo>RVA_Domain_Task</echo>
+		<mkdir dir="${RVA_Domain.location}/build" />
+		<mkdir dir="${RVA_Domain.location}/dist" />
+		<javac srcdir="${RVA_Domain.location}/src" 
+		destdir="${RVA_Domain.location}/build" 
+		debug="on" 
+		fork="true" 
+		source="${JAVA_SOURCE_VERSION}"
+		target="${JAVA_TARGET_VERSION}"
+		includes="**/*.java" 
+		includeantruntime="false">
+			<classpath>
+			<path refid="compile.classpath"/>
+			<pathelement location="${RVA_Common.location}/dist/RVA_Common.jar" />
+			</classpath>
+		</javac>
+		<jar destfile="${RVA_Domain.location}/dist/RVA_Domain.jar" basedir="${RVA_Domain.location}/build" includes="com/**/*.class" excludes="**/*.xml,**/.dm/*,**/.dm" />
+	</target>
+
+	<target name="RVA_persistence_Task" depends="RVA_Domain_Task" description="RVA Persistence Jar Creation">
+		<echo>RVA_persistence_Task</echo>
+		<mkdir dir="${RVA_persistence.location}/build" />
+		<mkdir dir="${RVA_persistence.location}/dist" />
+		<javac srcdir="${RVA_persistence.location}/src" 
+		destdir="${RVA_persistence.location}/build" 
+		debug="on" 
+		fork="true" 
+		source="${JAVA_SOURCE_VERSION}"
+		target="${JAVA_TARGET_VERSION}" 
+		includes="**/*.java" 
+		includeantruntime="false">
+			<classpath>
+			<path refid="compile.classpath"/>
+				<pathelement location="${RVA_Domain.location}/dist/RVA_Domain.jar" />
+				<pathelement location="${RVA_Common.location}/dist/RVA_Common.jar" />
+			</classpath>
+		</javac>
+		<jar destfile="${RVA_persistence.location}/dist/RVA_persistence.jar" basedir="${RVA_persistence.location}/build" includes="com/**/*.class" excludes="**/*.xml,**/.dm/*,**/.dm" />
+	</target>
+	<target name="RVA_Service_Task" depends="RVA_persistence_Task" description="RVA Service Jar Creation">
+		<echo>RVA_Service_Task</echo>
+		<mkdir dir="${RVA_Service.location}/build" />
+		<mkdir dir="${RVA_Service.location}/dist" />
+		<javac srcdir="${RVA_Service.location}/src" 
+		destdir="${RVA_Service.location}/build" 
+		debug="on" 
+		fork="true" 
+		source="${JAVA_SOURCE_VERSION}"
+		target="${JAVA_TARGET_VERSION}" 
+		includes="**/*.java" 
+		includeantruntime="false">
+			<classpath>
+			<path refid="compile.classpath"/>
+				<pathelement location="${RVA_Domain.location}/dist/RVA_Domain.jar" />
+				<pathelement location="${RVA_Common.location}/dist/RVA_Common.jar" />
+				<pathelement location="${RVA_persistence.location}/dist/RVA_persistence.jar" />
+			</classpath>
+		</javac>
+		<jar destfile="${RVA_Service.location}/dist/RVA_Service.jar">
+			<fileset dir="${RVA_Service.location}/build" />
+			<fileset dir="${RVA_Service.location}/src/main" excludes="**/*.java,**/META-INF/*,**/*.xml,**/.dm/*,**/.dm" />
+			<fileset dir="${RVA_Service.location}/src/test" excludes="**/*.java,**/META-INF/*,**/*.xml,**/.dm/*,**/.dm" />
+			<fileset dir="${RVA_Service.location}/src/main/resources" excludes="**/*.java,**/META-INF/*,**/*.xml,**/.dm/*,**/.dm" />
+			<fileset dir="${RVA_Service.location}/src/test/resources" excludes="**/*.java,**/META-INF/*,**/*.xml,**/.dm/*,**/.dm" />
+		</jar>
+	</target>
+	<target name="RVA_EJB_Task" depends="RVA_Service_Task" description="RVA EJB Jar Creation">
+		<echo>RVA_EJB_Task</echo>
+		<mkdir dir="${RVA_ejbs.location}/build" />
+		<mkdir dir="${RVA_ejbs.location}/dist" />
+		<javac srcdir="${RVA_ejbs.location}/src" 
+		destdir="${RVA_ejbs.location}/build" 
+		debug="on" 
+		fork="true" 
+		source="${JAVA_SOURCE_VERSION}"
+		target="${JAVA_TARGET_VERSION}" 
+		includes="**/*.java" 
+		includeantruntime="false">
+			<classpath>
+			<path refid="compile.classpath"/>
+				<pathelement location="${websphere.home}/lib/xerces.jar" />
+				<pathelement location="${websphere.home}/lib/ivjejb35.jar" />
+				<pathelement location="${websphere.home}/lib/vaprt.jar" />
+				<pathelement location="${RVA_Domain.location}/dist/RVA_Domain.jar" />
+				<pathelement location="${RVA_Common.location}/dist/RVA_Common.jar" />
+				<pathelement location="${RVA_Service.location}/dist/RVA_Service.jar" />
+			</classpath>
+		</javac>
+		<ivy:retrieve resolveid="ivyresolve" pattern="${RVA_Ear.location}/lib/[artifact]-[revision](-[classifier]).[ext]" conf="ejb" type="jar,bundle">
+						<exclude matcher="regexp" module="[a-zA-Z]*\\-sources.jar" />
+						<exclude matcher="regexp" module="[a-zA-Z]*\\-javadoc.jar" />			
+		</ivy:retrieve>
+		<jar jarfile="${RVA_ejbs.location}/dist/RVA_ejbs.jar" manifest="${RVA_ejbs.location}/ejbModule/META-INF/MANIFEST.MF">
+			<fileset dir="${RVA_ejbs.location}/build" includes="com/**/*.class" />
+			<fileset dir="${RVA_Ear.location}/lib" includes ="*.jar"/>
+			<zipfileset dir="${RVA_ejbs.location}/ejbModule/META-INF" prefix="META-INF" />
+		</jar>
+
+	</target>
+
+
+	<target name="RVA_presentation_Task" depends="RVA_Service_Task" description="RVA Presentation Jar Creation">
+		<echo>RVA_presentation_Task</echo>
+		<mkdir dir="${RVA_presentation.location}/build" />
+		<mkdir dir="${RVA_presentation.location}/dist" />
+		<javac srcdir="${RVA_presentation.location}/src" 
+		destdir="${RVA_presentation.location}/build" 
+		debug="on" 
+		fork="true" 
+		source="${JAVA_SOURCE_VERSION}"
+		target="${JAVA_TARGET_VERSION}" 
+		includes="**/*.java" 
+		includeantruntime="false">
+			<classpath>
+			<path refid="compile.classpath"/>
+				<pathelement location="${RVA_Domain.location}/dist/RVA_Domain.jar" />
+				<pathelement location="${RVA_Common.location}/dist/RVA_Common.jar" />
+				<pathelement location="${RVA_persistence.location}/dist/RVA_persistence.jar" />
+				<pathelement location="${RVA_Service.location}/dist/RVA_Service.jar" />
+			</classpath>
+		</javac>
+		<jar destfile="${RVA_presentation.location}/dist/RVA_presentation.jar" basedir="${RVA_presentation.location}/build" includes="com/**/*.class" excludes="**/*.xml,**/*.xml,**/.dm/*,**/.dm" />
+	</target>
+
+	<target name="RVA_Web_Task" depends="RVA_presentation_Task, RVA_EJB_Task" description="RVA Web War Creation">
+		<echo>RVA_Web_Task</echo>
+		<mkdir dir="${RVA_Web.location}/build" />
+		<mkdir dir="${RVA_Web.location}/dist" />
+		<javac srcdir="${RVA_Web.location}/src" 
+		destdir="${RVA_Web.location}/build" 
+		debug="on" 
+		fork="true" 
+		source="${JAVA_SOURCE_VERSION}"
+		target="${JAVA_TARGET_VERSION}"
+		includes="**/*.java" 
+		includeantruntime="false">
+		
+		<classpath>
+			<path refid="compile.classpath"/>
+				<pathelement location="${RVA_Domain.location}/dist/RVA_Domain.jar" />
+				<pathelement location="${RVA_Common.location}/dist/RVA_Common.jar" />
+				<pathelement location="${RVA_persistence.location}/dist/RVA_persistence.jar" />
+				<pathelement location="${RVA_Service.location}/dist/RVA_Service.jar" />
+				<pathelement location="${RVA_presentation.location}/dist/RVA_presentation.jar" />
+			</classpath>
+		</javac>
+		<ivy:retrieve resolveid="ivyresolve" pattern="${RVA_Web.location}/WebContent/WEB-INF/lib/[artifact]-[revision](-[classifier]).[ext]" conf="web" type="jar,bundle">
+						<exclude matcher="regexp" module="[a-zA-Z]*\\-sources.jar" />
+						<exclude matcher="regexp" module="[a-zA-Z]*\\-javadoc.jar" />			
+		</ivy:retrieve>
+		<war destfile="${RVA_Web.location}/dist/rva_web.war" manifest="${RVA_Web.location}/WebContent/META-INF/MANIFEST.MF">
+			<fileset dir="${RVA_Web.location}/WebContent">
+				<exclude name="**/*.class" />
+				<exclude name="**/*.jar" />
+				<exclude name="**/.dm/*" />
+				<exclude name="**/.dm" />
+			</fileset>
+			<lib dir="${RVA_Web.location}/WebContent/WEB-INF/lib">
+			<include name="*.jar"/>
+			<exclude name="**/.dm/*, **/.dm" />
+			</lib>
+			<classes dir="${RVA_Web.location}/src">
+				<include name="**/*.xml" />
+				<include name="**/*.properties" />
+				<include name="**/*.xsl" />
+				<exclude name="**/.dm/*" />
+				<exclude name="**/.dm" />
+			</classes>
+			<classes dir="${RVA_Web.location}/resources">
+				<include name="**/*.xml" />
+				<include name="**/*.properties" />
+				<include name="**/*.xsl" />
+				<exclude name="**/.dm/*" />
+				<exclude name="**/.dm" />
+			</classes>			
+			<classes dir="${RVA_Web.location}/build">
+				<include name="**/*.class" />
+				<include name="**/*.xml" />
+				<include name="**/*.properties" />
+				<exclude name="**/.dm/*" />
+				<exclude name="**/.dm" />
+			</classes>
+		</war>
+	</target>
+
+	<target name="RVA_Ear_Task" depends="RVA_Web_Task" description="RVA Ear Creation">
+		<echo>RVA_Ear_Task</echo>
+		<mkdir dir="${RVA_Ear.location}/dist" />
+		<jar destfile="${RVA_Ear.location}/dist/rva.ear" manifest="${RVA_Ear.location}/META-INF/MANIFEST.MF" excludes="**/.dm/*,**/.dm" >
+			<metainf dir="${RVA_Ear.location}/META-INF" /> 
+			<fileset dir="${RVA_Web.location}/dist">
+				<include name="rva_web.war" />
+			</fileset>
+			<fileset dir="${RVA_Domain.location}/dist">
+				<include name="RVA_Domain.jar" />
+			</fileset>
+			<fileset dir="${RVA_Common.location}/dist">
+				<include name="RVA_Common.jar" />
+			</fileset>
+			<fileset dir="${RVA_persistence.location}/dist">
+				<include name="RVA_persistence.jar" />
+			</fileset>
+			<fileset dir="${RVA_Service.location}/dist">
+				<include name="RVA_Service.jar" />
+			</fileset>
+			<fileset dir="${RVA_ejbs.location}/dist">
+				<include name="RVA_ejbs.jar" />
+			</fileset>
+			<fileset dir="${RVA_presentation.location}/dist">
+				<include name="RVA_presentation.jar" />
+			</fileset>
+		</jar>
+		<copy file="${RVA_Ear.location}/dist/rva.ear" todir="${archiveLocation}"/>
+	</target>	
+	
+	<target name="deploy-nexus" depends="RVA_Ear_Task" description="Deploying to Nexus">
+			<ivy:configure settingsid="publish.settings" file="/home/ec2-user/.ivy2/ivysettings.xml" override="true" />
+			<ivy:deliver deliverpattern="ivy.xml" pubrevision="${ivy.revision}" status="release" />
+			<ivy:makepom ivyfile="ivy.xml" pomfile="${ivy.module}.pom" />
+			<ivy:publish organisation="com.hcsc.rva" module="rva" revision="1.0" pubrevision="1.0-SNAPSHOT" settingsref="publish.settings" resolver="nexus-snapshots" overwrite="true" publishivy="false" pubdate="now">
+				<artifacts pattern="${RVA_Ear.location}/dist/rva.ear" />
+			</ivy:publish>
+	</target>
+</project>

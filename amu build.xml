@@ -1,0 +1,217 @@
+<project name="AMU" default="buildEar" basedir="../" xmlns:ivy="antlib:org.apache.ivy.ant"> 
+2 
+ 
+3     <ivy:configure settingsid="resolve.settings" file="AMU_BuildScripts/ivysettings.xml" /> 
+4 	<ivy:resolve resolveid="ivyresolve" settingsRef="resolve.settings" type="jar,bundle" file="AMU_BuildScripts/ivy.xml" /> 
+5 	 
+6 	<!-- ==================================================================== --> 
+7 	<!-- Properties                                                           --> 
+8 	<!-- ==================================================================== --> 
+9 	<property name="JAVA_SOURCE_VERSION"   value="1.6"/> 
+10 	<property name="JAVA_TARGET_VERSION"   value="1.6"/> 
+11 	<property file="jdk.properties"/> 
+12     <property file="amu_build.properties"/> 
+13 	 
+14    		 
+15     <!-- ==================================================================== --> 
+16 	<!-- Library paths                                                        --> 
+17 	<!-- ==================================================================== --> 
+18 	<ivy:cachepath resolveid="ivyresolve" pathid="compile.classpath" conf="web,env,runtime,cxf" /> 
+19 	 
+20 	<target name="check"> 
+21 		<condition property="deldir"> 
+22 		<available file="AMU_Shared/dist" type="dir"/> 
+23 		</condition> 
+24 	</target> 
+25 	 
+26 	<target name="clean" depends="check" description="Cleaning of class files"> 
+27 		<echo message="Cleaning ${ant.project.name} class files"/> 
+28 		 
+29 		<delete dir="AMU_Shared/bin"/> 
+30 		<delete dir="AMU_Shared/dist"/> 
+31 		<delete dir="AMU_Ear/bin"/> 
+32 		<delete dir="AMU_Ear/dist"/> 
+33 		<delete dir="AMU_Web/bin"/> 
+34 		<delete dir="AMU_Web/dist"/> 
+35 		 
+36 		<mkdir dir="AMU_Shared/bin"/> 
+37 		<mkdir dir="AMU_Shared/dist"/> 
+38 		<mkdir dir="AMU_Ear/bin"/> 
+39 		<mkdir dir="AMU_Ear/dist"/> 
+40 		<mkdir dir="AMU_Web/bin"/> 
+41 		<mkdir dir="AMU_Web/dist"/> 
+42 	</target> 
+43 	 
+44     <!-- ==================================================================== --> 
+45 	<!-- Build and Compilation                                                --> 
+46 	<!-- ==================================================================== --> 
+47 	<target name="compileSubproject" description="compile a subproject"> 
+48 		<echo>Compiling ${subprojectName}</echo> 
+49 		<delete dir="${subprojectName}/build"/> 
+50 		<mkdir dir="${subprojectName}/build" /> 
+51 		<javac srcdir="${subprojectName}/${javaSourceDir}" 
+52 			destdir="${subprojectName}/build" 
+53 			debug="on" 
+54 			fork="true" 
+55 			source="${JAVA_SOURCE_VERSION}" 
+56 			target="${JAVA_TARGET_VERSION}" 
+57 			includeantruntime="false"> 
+58 			<classpath> 
+59 				<path refid="compile.classpath"/> 
+60 				<!-- <path refid="war_libraries"/> --> 
+61 				<fileset dir="AMU_Shared/dist"> 
+62 					<include name="**/*.jar"/> 
+63 					<exclude name="**/.dm/*" /> 
+64 				<exclude name="**/.dm" /> 
+65 				</fileset> 
+66 			</classpath> 
+67 		</javac> 
+68 	</target> 
+69 	 
+70 	<target name="buildSubproject" description="Build a standard subproject"> 
+71 		<echo>Building ${subprojectName}</echo> 
+72 		<echo message="Creating the bin and dist folders"/> 
+73 		<mkdir dir="${subprojectName}/bin"/> 
+74 		<mkdir dir="${subprojectName}/dist"/> 
+75 		<antcall target="compileSubproject"><param name="subprojectName" value="${subprojectName}"/> 
+76 			<param name="javaSourceDir" value="${javaSourceDir}"/> 
+77 		</antcall> 
+78 
+ 
+79 		<copy todir="${subprojectName}/build"> 
+80 			<fileset dir="${subprojectName}/${javaSourceDir}" excludes="**/*.java,**/.dm/*,**/.dm"/> 
+81 		</copy> 
+82 		<jar destfile="AMU_Shared/dist/${subprojectName}.jar" > 
+83 			<fileset dir="${subprojectName}/build" /> 
+84 		</jar> 
+85 	</target> 
+86 	<!-- ==================================================================== --> 
+87 	<!-- Project specific: dependencies, war, ear                             --> 
+88 	<!-- ==================================================================== --> 
+89 	<target name="AMU_Shared" depends="clean"> 
+90 		<delete dir="AMU_Shared/dist"/> 
+91 		<antcall target="buildSubproject"><param name="subprojectName" value="AMU_Shared"/> 
+92 			<param name="javaSourceDir" value="src/java"/> 
+93 		</antcall> 
+94 		<ivy:retrieve resolveid="ivyresolve" pattern="AMU_Shared/dist/[artifact]-[revision](-[classifier]).[ext]" conf="shared" type="jar,bundle"> 
+95 						<exclude matcher="regexp" module="[a-zA-Z]*\\-sources.jar" /> 
+96 						<exclude matcher="regexp" module="[a-zA-Z]*\\-javadoc.jar" />			 
+97 		</ivy:retrieve>	 
+98 	</target> 
+99 	<target name="AmuWS" depends="clean"> 
+100 		<antcall target="buildSubproject"><param name="subprojectName" value="AmuWS"/> 
+101 			<param name="javaSourceDir" value="com"/> 
+102 		</antcall> 
+103 	</target> 
+104 	<target name="AMU_Web" depends="clean"> 
+105 		<antcall target="buildSubproject"><param name="subprojectName" value="AMU_Web"/> 
+106 			<param name="javaSourceDir" value="JavaSource"/> 
+107 		</antcall> 
+108 	</target> 
+109 	<target name="AMU_Distributed_DataEntry" depends="clean"> 
+110 		<antcall target="buildSubproject"><param name="subprojectName" value="AMU_Distributed_DataEntry"/> 
+111 			<param name="javaSourceDir" value="src/java"/> 
+112 		</antcall> 
+113 	</target> 
+114 	<target name="AmuWSImpl"  depends="clean"> 
+115 		<antcall target="buildSubproject"><param name="subprojectName" value="AmuWSImpl"/> 
+116 			<param name="javaSourceDir" value="com"/> 
+117 		</antcall> 
+118 	</target> 
+119 	<target name="UWPortal" depends="AMU_Shared,AmuWS,AMU_Web,AMU_Distributed_DataEntry,AmuWSImpl"> 
+120 		<antcall target="buildSubproject"><param name="subprojectName" value="UWPortal"/> 
+121 			<param name="javaSourceDir" value="src/java"/> 
+122 		</antcall> 
+123 	</target> 
+124 	<target name="buildWar" depends="UWPortal" description="War Creation">	 
+125 	<antcall target="buildSubproject"><param name="subprojectName" value="AMU_Web"/> 
+126 		<param name="javaSourceDir" value="JavaSource"/> 
+127 	</antcall> 
+128 		<copy todir="AMU_Web/WebContent/WEB-INF/classes"> 
+129 			<fileset dir="AMU_Web/WebContent/WEB-INF/config/security">			 
+130 				<include name="**/*" /> 
+131 				<exclude name="**/.dm/*" /> 
+132 				<exclude name="**/.dm" /> 
+133 			</fileset> 
+134 		</copy>	 
+135 		 
+136 		<copy todir="AMU_Web/WebContent/WEB-INF/classes/resources"> 
+137 			<fileset dir="AMU_Web/JavaSource/resources">			 
+138 				<include name="**/*.*" /> 
+139 				<exclude name="**/.dm/*" /> 
+140 				<exclude name="**/.dm" /> 
+141 			</fileset> 
+142 		</copy> 
+143 		<copy todir="AMU_Web/WebContent/WEB-INF/classes"> 
+144 			<fileset dir="AMU_Web/JavaSource">			 
+145 				<include name="**/*.properties" /> 
+146 				<exclude name="**/.dm/*" /> 
+147 				<exclude name="**/.dm" /> 
+148 			</fileset> 
+149 		</copy> 
+150 		 
+151 		<copy todir="AMU_Web/WebContent/WEB-INF/classes/com"> 
+152 			<fileset dir="AMU_Web/JavaSource/com">			 
+153 				<include name="**/*.properties" /> 
+154 				<exclude name="**/.dm/*" /> 
+155 				<exclude name="**/.dm" /> 
+156 			</fileset> 
+157 		</copy> 
+158 		<ivy:retrieve resolveid="ivyresolve" pattern="AMU_Web/WebContent/WEB-INF/lib/cxf/[artifact]-[revision](-[classifier]).[ext]" conf="cxf" type="jar,bundle"> 
+159 						<exclude matcher="regexp" module="[a-zA-Z]*\\-sources.jar" /> 
+160 						<exclude matcher="regexp" module="[a-zA-Z]*\\-javadoc.jar" />			 
+161 		</ivy:retrieve> 
+162 		<ivy:retrieve resolveid="ivyresolve" pattern="AMU_Web/WebContent/WEB-INF/lib/[artifact]-[revision](-[classifier]).[ext]" conf="runtime,web" type="jar,bundle"> 
+163 						<exclude matcher="regexp" module="[a-zA-Z]*\\-sources.jar" /> 
+164 						<exclude matcher="regexp" module="[a-zA-Z]*\\-javadoc.jar" />			 
+165 		</ivy:retrieve> 
+166 		<war destfile="AMU_Web/dist/amu.war"  
+167 			manifest="AMU_Web/WebContent/META-INF/MANIFEST.MF"> 
+168 			<fileset dir="AMU_Web/WebContent"> 
+169 				<exclude name="**/*.jar" /> 
+170 				<exclude name="**/*.class" /> 
+171 				<exclude name="**/.dm/*" /> 
+172 				<exclude name="**/.dm" /> 
+173 			</fileset> 
+174 			<classes dir="AMU_Web/build" > 
+175 				<include name="**/*.class" /> 
+176 				<include name="**/*.xml" /> 
+177 				<include name="**/*.properties" /> 
+178 				<exclude name="**/ApplicationResources.properties" /> 
+179 				<exclude name="**/ApplicationContext.properties" /> 
+180 				<exclude name="**/commonvalidationmessages_en_US.properties" /> 
+181 				<exclude name="**/.dm/*" /> 
+182 				<exclude name="**/.dm" /> 
+183 			</classes> 
+184 			<lib dir="AMU_Web/WebContent/WEB-INF/lib" />			 
+185 		</war> 
+186 	</target> 
+187 	<target name="buildEar" depends="buildWar" description="Ear Creation"> 
+188 			<ear destfile="AMU_Ear/dist/amu.ear"  
+189 				appxml="AMU_Ear/META-INF/application.xml"> 
+190 			<metainf dir="AMU_Ear/META-INF" excludes="application.xml" /> 
+191 			<fileset dir="AMU_Ear" includes="lib/**/*" /> 
+192 			<fileset dir="AMU_Shared/dist" includes="MedicalLoadService-1.0.jar"/> 
+193 			<fileset dir="AMU_Shared/dist" includes="AmuWS.jar"/> 
+194 			<fileset dir="AMU_Shared/dist" includes="EnrollmentService-1.0.jar"/> 
+195 			<fileset dir="AMU_Shared/dist" includes="UWPortal.jar"/> 
+196 			<fileset dir="AMU_Shared/dist" includes="AmuWSImpl.jar"/> 
+197 			<fileset dir="AMU_Shared/dist" includes="eSales_Common_Security-1.1.jar"/> 
+198 			<fileset dir="AMU_Shared/dist" includes="AMU_Distributed_DataEntry.jar"/> 
+199 			<fileset dir="AMU_Shared/dist" includes="AMU_Shared.jar"/> 
+200 			<fileset dir="AMU_Ear" includes="**/*.jar"/> 
+201 			<fileset dir="AMU_Ear" includes=".runtime,.j2ee,.compatibility"/> 
+202 			<fileset dir="AMU_Web/dist" includes="amu.war"/> 
+203 		</ear> 
+204 		<copy file="AMU_Ear/dist/amu.ear" todir="${archiveLocation}"/> 
+205 	</target>	 
+206 	 
+207 	<target name="deploy-nexus" depends="buildEar"> 
+208 			<ivy:configure settingsid="publish.settings" file="/home/ec2-user/.ivy2/ivysettings.xml" override="true" /> 
+209 			<ivy:deliver deliverpattern="ivy.xml" pubrevision="${ivy.revision}" status="release" /> 
+210 			<ivy:makepom ivyfile="ivy.xml" pomfile="${ivy.module}.pom" /> 
+211 			<ivy:publish organisation="com.hcsc.amu" module="amu" revision="1.0" pubrevision="1.0-SNAPSHOT" settingsref="publish.settings" resolver="nexus-snapshots" overwrite="true" publishivy="false" pubdate="now"> 
+212 				<artifacts pattern="AMU_Ear/dist/amu.ear" /> 
+213 			</ivy:publish> 
+214 	</target>	 
+215 </project> 

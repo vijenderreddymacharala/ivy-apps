@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+
+    <!-- Library versions and JARs -->
+    <import file="../properties_local.xml"/>
+    <property file="test/test.properties"/>
+   
+    
+    <!-- Application options that will likely vary between applications -->
+    <property name="http.port" value="9080"/>
+    <property name="integration.type" value="hibernate"/>
+
+    <!-- RAD & WAS Properties -->
+    <!-- Customize for your application -->
+	<property name="websphere.profile" value="default"/>
+	<property name="websphere.server" value="localhost"/>
+	<property name="ide.home" value="C:/PROGRA~1/IBM/RAD6" />
+	<property name="eclipse.home" value="${ide.home}/eclipse" />
+	<property name="websphere.serverhome" value="${ide.home}/runtimes/base_v6" />
+	<property name="websphere.lib" value="${websphere.serverhome}/lib" />
+	<property name="websphere.jre" value="${websphere.serverhome}/java/jre" />
+	<property name="websphere.jre.lib" value="${websphere.serverhome}/java/jre/lib" />
+	<property name="websphere.servername" value="server1"/>
+   	<property name="websphere.bin" value="${websphere.serverhome}/bin"/>
+   	<property name="websphere.profile.dir" value="${websphere.serverhome}/profiles/${websphere.profile}"/>
+   	<property name="websphere.profile.bin" value="${websphere.profile.dir}/bin"/>
+   	<property name="websphere.installable.apps" value="${websphere.profile.dir}/installableApps"/>
+   	<property name="wrd.workspace" value="${user.home}/private/Websphere/RapidDeploy"/>
+    <!-- Customize for your application                                                       -->
+    <!-- websphere.port.offset is added to 9080 to be the HTTP port Websphere will listen to  -->
+    <!-- as well as other ports like the the SOAP and RMI ports. Valid values are 1-9.        -->
+    <!-- Only one server may use each port at the same time                                   -->
+	<property name="websphere.port.offset" value="0" />
+	<property name="websphere.host" value="localhost" />
+	<property name="websphere.node" value="Node0${websphere.port.offset}" />
+	<property name="websphere.cell" value="${websphere.host}${websphere.node}Cell" />
+   	<property name="websphere.installed.apps" value="${websphere.profile.dir}/installedApps/${websphere.cell}"/>
+	<property name="runtime.dependencies.dir" location="${tools.project.basedir}/dependencies/runtime" />
+	<property name="test.dependencies.dir" location="${tools.project.basedir}/dependencies/test" />
+	<property name="provided.dependencies.dir" location="${tools.project.basedir}/dependencies/provided" />
+	<property name="aspectj-inpath.dependencies.dir" location="${tools.project.basedir}/dependencies/aspectj-inpath" />
+
+
+    <!-- The target directory for building the packed web application -->
+    <property name="webapp.dist" value="${dist.dir}"/>    
+    <!-- The target directory for building the unpacked web application -->
+    <property name="webapp.target" value="${build.dir}/${web.project}"/>  
+	<!-- The target directory for building the unpacked multi web application -->
+	<property name="multiwebapp.target" value="${build.dir}/${multi.project}"/>
+    <!-- Java compiler -->
+    <property name="compile.compiler" value="javac1.5"/>
+    <!-- Java compiler target -->
+    <property name="compile.target" value="1.6"/>
+    <!-- Java compiler source -->
+    <property name="compile.source" value="1.6"/>
+    <!-- Should Java compilations set the debug compiler option? -->
+    <property name="compile.debug" value="true"/>
+    <!-- Should Java compilations set the deprecation compiler option? -->
+    <property name="compile.deprecation" value="false"/>
+    <!-- Should Java compilations set the optimize compiler option? -->
+    <property name="compile.optimize" value="false"/>
+    <!-- The source directory for the whole project 
+    <property name="src" value="xxx/src"/>
+    <property name="tar.user" value="ant"/>
+    <property name="tar.group" value="ant"/>
+    <property name="tar.mode" value="644"/> -->
+
+	<path id="derby.classpath">
+		<fileset dir="${derby.lib.dir}">
+			<include name="*.jar" />
+		</fileset>
+	</path>
+    
+    <!-- Hibernate -->
+    <path id="hibernate.classpath">
+        <pathelement location="${hibernate.jar}"/>
+        <fileset dir="${hibernate.dir}" includes="*.jar"/>
+        <path refid="derby.classpath"/>
+        <pathelement location="${commons-beanutils.jar}"/>
+        <pathelement location="${commons-lang.jar}"/>
+        <pathelement location="${commons-logging.jar}"/>
+        <path location="${build.dir}/integration/classes"/>
+        <path location="${build.dir}/common/classes"/>
+    </path>
+
+	<path id="xdoclet.classpath">
+		<fileset dir="${xdoclet2.lib.dir}/lib" includes="*.jar" />
+		<fileset dir="${servlet.lib.dir}" includes="*.jar" />
+	</path>
+   
+    <property name="inheritAll" value="true"/>
+    
+    <!-- this macro is called by tasks that depend on a database.properties -->
+    <macrodef name="generate-database-properties">
+        <sequential>
+            <echo>generating database.properties from db.properties</echo>
+            <echo>URL: ${database.url}</echo>
+            <propertyfile comment="Hibernate Configuration for JUnit tests" 
+                file="database/database.properties">
+                <entry key="hibernate.dialect" value="${hibernate.dialect}"/>
+                <entry key="hibernate.connection.driver_class" value="${database.driver.class}"/>
+                <entry key="hibernate.connection.url" value="${database.url}"/>
+                <entry key="hibernate.connection.username" value="${database.user}"/>
+                <entry key="hibernate.connection.password" value="${database.password}"/>
+                <entry key="hibernate.connection.show_sql" value="${database.show_sql}"/>
+                <entry key="integration.type" value="${integration.type}"/>
+             </propertyfile>
+             
+             <property file="hibernate.properties"/>
+         </sequential>
+    </macrodef>
+    
+</project>
